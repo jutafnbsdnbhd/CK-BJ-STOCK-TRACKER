@@ -1,9 +1,11 @@
-// Fixed display order for item categories. Anything not listed here falls to the end.
+// Fixed display order for item categories — matches the printed Delivery
+// Order template exactly, so the app and the paper use one vocabulary.
+// Anything not listed here falls to the end.
 export const CATEGORY_ORDER = [
-  "Proteins/Mains",
-  "Sauces/Bases",
-  "Pantry/Condiments",
-  "Misc",
+  "Protein / Ready Item",
+  "Sauce & Curry",
+  "Condiment & Oil",
+  "Off Season",
 ];
 
 export const KITCHEN_NAME = "Bukit Jalil";
@@ -22,7 +24,7 @@ export function sortCategories(categories) {
 export function groupByCategory(items) {
   const map = new Map();
   for (const item of items) {
-    const key = item.category || "Misc";
+    const key = item.category || "Off Season";
     if (!map.has(key)) map.set(key, []);
     map.get(key).push(item);
   }

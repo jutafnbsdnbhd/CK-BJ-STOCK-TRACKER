@@ -8,8 +8,9 @@ import ManagerLogin from "@/components/ManagerLogin";
 import OverviewTab from "@/components/manager/OverviewTab";
 import HistoryTab from "@/components/manager/HistoryTab";
 import CrudTab from "@/components/manager/CrudTab";
+import DeliveryOrdersTab from "@/components/manager/DeliveryOrdersTab";
 
-const TABS = ["Overview", "Items", "Staff", "Branches", "History"];
+const TABS = ["Overview", "Delivery Orders", "Items", "Staff", "Branches", "History"];
 
 export default function ManagerPage() {
   const router = useRouter();
@@ -72,13 +73,14 @@ export default function ManagerPage() {
 
       <main className="mx-auto max-w-4xl px-4 py-5 pb-20">
         {tab === "Overview" ? <OverviewTab /> : null}
+        {tab === "Delivery Orders" ? <DeliveryOrdersTab /> : null}
         {tab === "Items" ? (
           <CrudTab
             endpoint="items"
             label="item"
             fields={[
-              { key: "category", default: "Proteins/Mains" },
-              { key: "uom", placeholder: "UOM e.g. kg", default: "pcs" },
+              { key: "category", default: "Protein / Ready Item" },
+              { key: "uom", placeholder: "Unit e.g. Pkt", default: "Pkt" },
             ]}
           />
         ) : null}

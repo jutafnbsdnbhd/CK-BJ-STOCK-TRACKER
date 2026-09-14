@@ -2,10 +2,12 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   AlertTriangle,
   Check,
   CheckCircle2,
+  FileText,
   Loader2,
   Search,
   Store,
@@ -44,6 +46,7 @@ export default function MovementFlow({ type }) {
   const [search, setSearch] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
+  const [doNumber, setDoNumber] = useState(null);
 
   useEffect(() => {
     const person = loadStaff();
@@ -114,17 +117,43 @@ export default function MovementFlow({ type }) {
     setSubmitting(true);
     setSubmitError(null);
 
-    const rows = entered.map(({ item, value }) => ({
-      item_id: item.id,
-      movement_type: type,
-      quantity: value,
-      branch_id: isOut ? branchId : null,
-      note: note.trim() || null,
-      staff_id: staff.id,
-      staff_name: staff.name,
-    }));
+    if (isOut) {
+      // One transaction: the DO header and every line land together, or
+      // nothing does. A dropped connection can no longer leave half a
+      // delivery in the ledger.
+      const { data, error } = await supabase.rpc("create_stock_out", {
+        p_branch_id: branchId,
+        p_staff_id: staff.id,
+        p_staff_name: staff.name,
+        p_note: note.trim() || null,
+        p_lines: entered.map(({ item, value }) => ({
+          item_id: item.id,
+          quantity: value,
+        })),
+      });
+      setSubmitting(false);
+      if (error) {
+        setSubmitError(error.message);
+        setStep("review");
+        return;
+      }
+      const record = Array.isArray(data) ? data[0] : data;
+      setDoNumber(record?.do_number || null);
+      setStep("done");
+      return;
+    }
 
-    const { error } = await supabase.from("stock_movements").insert(rows);
+    const { error } = await supabase.from("stock_movements").insert(
+      entered.map(({ item, value }) => ({
+        item_id: item.id,
+        movement_type: "in",
+        quantity: value,
+        branch_id: null,
+        note: note.trim() || null,
+        staff_id: staff.id,
+        staff_name: staff.name,
+      }))
+    );
     setSubmitting(false);
     if (error) {
       setSubmitError(error.message);
@@ -155,14 +184,29 @@ export default function MovementFlow({ type }) {
             {entered.length} item{entered.length === 1 ? "" : "s"} logged
             {isOut ? ` to ${branchName}` : ""}.
           </p>
+
+          {doNumber ? (
+            <div className="card mt-6 p-5">
+              <p className="text-xs uppercase tracking-wide text-muted font-semibold">
+                Delivery Order
+              </p>
+              <p className="text-2xl font-bold text-accent mt-1 tracking-wide">{doNumber}</p>
+              <Link href={`/do/${doNumber}`} className="btn-primary w-full mt-4">
+                <FileText size={18} />
+                View &amp; print DO
+              </Link>
+            </div>
+          ) : null}
+
           <div className="grid gap-2.5 mt-8">
             <button
-              className="btn-primary"
+              className={doNumber ? "btn-ghost" : "btn-primary"}
               onClick={() => {
                 setQty({});
                 setNote("");
                 setSearch("");
                 setSubmitError(null);
+                setDoNumber(null);
                 setStep(isOut ? "branch" : "entry");
                 router.refresh();
               }}

@@ -31,6 +31,194 @@ body {
   }
 }
 
+/* =====================================================================
+   DELIVERY ORDER document
+   Plain CSS, not Tailwind utilities, so print rules stay in one place and
+   the same markup renders identically on screen and on A4.
+   ===================================================================== */
+
+.do-sheet {
+  color: #111;
+  background: #fff;
+  font-size: 11px;
+  line-height: 1.45;
+  max-width: 190mm;
+  margin: 0 auto;
+}
+.do-company {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  margin-bottom: 6px;
+}
+.do-meta {
+  font-size: 10.5px;
+  color: #333;
+}
+.do-contact {
+  margin-top: 8px;
+}
+.do-rule {
+  border: 0;
+  border-top: 2px solid #111;
+  margin: 14px 0 18px;
+}
+.do-title {
+  text-align: center;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+}
+.do-att {
+  text-align: center;
+  font-size: 10.5px;
+  color: #333;
+  margin-top: 5px;
+}
+
+.do-infobar {
+  width: 100%;
+  margin: 18px 0 14px;
+  border: 1px solid #111;
+  border-collapse: collapse;
+}
+.do-infobar td {
+  padding: 8px 10px;
+  vertical-align: top;
+}
+.do-infobar .do-right {
+  text-align: right;
+}
+.do-label {
+  display: block;
+  font-size: 8.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #666;
+}
+.do-value {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+.do-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+.do-table th,
+.do-table td {
+  border: 1px solid #111;
+  padding: 6px 8px;
+  word-wrap: break-word;
+}
+.do-table th {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-align: left;
+}
+.do-table .do-center {
+  text-align: center;
+}
+.do-table .do-group td {
+  font-weight: 700;
+  background: #f2f0ec;
+}
+.do-col-item {
+  width: 27%;
+}
+.do-col-qty {
+  width: 9%;
+  text-align: center !important;
+}
+.do-col-unit {
+  width: 10%;
+  text-align: center !important;
+}
+.do-col-check {
+  width: 17%;
+}
+.do-col-notes {
+  width: 20%;
+}
+
+.do-remarks {
+  margin-top: 10px;
+  font-size: 10.5px;
+}
+
+.do-signs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 26px;
+  margin-top: 46px;
+  text-align: center;
+}
+.do-sign-line {
+  border-bottom: 1px solid #111;
+  height: 30px;
+}
+.do-sign-label {
+  font-weight: 700;
+  font-size: 11px;
+  margin-top: 5px;
+}
+.do-sign-sub {
+  font-size: 9.5px;
+  color: #555;
+}
+
+/* ---------------------------------------------------------------------
+   PRINT — A4, and the same rules give a clean browser "Save as PDF"
+   --------------------------------------------------------------------- */
+@page {
+  size: A4;
+  margin: 14mm 12mm;
+}
+
+@media print {
+  html,
+  body {
+    background: #fff !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .do-shell {
+    border: 0 !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+    overflow: visible !important;
+  }
+  .do-sheet {
+    max-width: none;
+  }
+  /* Never split a row, and repeat the header on every page */
+  .do-table thead {
+    display: table-header-group;
+  }
+  .do-table tr {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  .do-table .do-group {
+    page-break-after: avoid;
+    break-after: avoid;
+  }
+  .do-signs {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  .do-table .do-group td {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
+
 /* Hide number input spinners — kitchen staff use the numeric keypad */
 input[type="number"]::-webkit-outer-spin-button,
 input[type="number"]::-webkit-inner-spin-button {

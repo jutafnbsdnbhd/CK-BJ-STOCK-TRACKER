@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { ArrowDownToLine, ArrowUpFromLine, Loader2 } from "lucide-react";
+import Link from "next/link";
+import { ArrowDownToLine, ArrowUpFromLine, FileText, Loader2 } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 
 const PAGE = 50;
@@ -32,7 +33,7 @@ export default function HistoryTab() {
     let q = supabase
       .from("stock_movements")
       .select(
-        "id, movement_type, quantity, note, staff_name, movement_date, created_at, items(name, uom), branches(name)"
+        "id, movement_type, quantity, note, staff_name, movement_date, created_at, items(name, uom), branches(name), delivery_orders(do_number)"
       )
       .order("created_at", { ascending: false })
       .range(page * PAGE, page * PAGE + PAGE);
@@ -113,6 +114,15 @@ export default function HistoryTab() {
                     {out && row.branches?.name ? ` → ${row.branches.name}` : ""}
                   </p>
                   {row.note ? <p className="text-xs text-muted mt-0.5 italic">{row.note}</p> : null}
+                  {row.delivery_orders?.do_number ? (
+                    <Link
+                      href={`/do/${row.delivery_orders.do_number}`}
+                      className="inline-flex items-center gap-1 text-xs font-semibold text-accent mt-1 hover:underline"
+                    >
+                      <FileText size={12} />
+                      {row.delivery_orders.do_number}
+                    </Link>
+                  ) : null}
                 </div>
                 <span className={`font-bold shrink-0 ${out ? "text-amber-700" : "text-green-700"}`}>
                   {out ? "−" : "+"}

@@ -1,57 +1,111 @@
 -- =====================================================================
 -- A'rest Bukit Jalil Central Kitchen — Stock Tracker
--- seed.sql  (v1.0.0)
--- Run this AFTER schema.sql, in Supabase > SQL Editor.
+-- seed.sql  (v1.1 — real item list, 44 items)
+--
+-- Run this in Supabase > SQL Editor AFTER schema.sql.
+-- Safe to re-run.
+--
+-- STEP 1 removes the 12 placeholder items that shipped with v1.0.
+-- STEP 2 inserts the real list.
 -- =====================================================================
 
--- ---------------------------------------------------------------------
--- STAFF — placeholder. Replace via Manager > Staff after launch.
--- ---------------------------------------------------------------------
-insert into public.staff (name) values
-  ('Manager')
-on conflict do nothing;
 
 -- ---------------------------------------------------------------------
--- BRANCHES — stock-out destinations. Placeholder.
--- Replace with the real Bukit Jalil destination list via Manager > Branches.
+-- STEP 1 — remove the placeholder items
+-- Deletes them outright if nothing has been logged against them.
+-- Anything already used in a test movement is deactivated instead, so
+-- the movement history stays readable.
 -- ---------------------------------------------------------------------
-insert into public.branches (name) values
-  ('Branch 1')
-on conflict do nothing;
+delete from public.items i
+where i.name in (
+  'Chicken Breast','Chicken Thigh','Beef Patty','Salmon Fillet',
+  'Tomato Base','Mushroom Sauce','Chilli Paste',
+  'All Purpose Flour','Caster Sugar','Cooking Oil','Salt','Vacuum Bag'
+)
+and not exists (select 1 from public.stock_movements m where m.item_id = i.id);
 
--- =====================================================================
--- ITEMS
+update public.items set is_active = false
+where name in (
+  'Chicken Breast','Chicken Thigh','Beef Patty','Salmon Fillet',
+  'Tomato Base','Mushroom Sauce','Chilli Paste',
+  'All Purpose Flour','Caster Sugar','Cooking Oil','Salt','Vacuum Bag'
+);
+
+
 -- ---------------------------------------------------------------------
--- ⚠️  THE LIST BELOW IS A PLACEHOLDER, NOT YOUR BATU PAHAT LIST.
+-- STEP 2 — the real item list
 --
--- Replace it with the real Bukit Jalil store item list before go-live.
--- Two ways to do that:
---   1. Paste your real list to Claude and get a finished seed.sql back, or
---   2. Delete the rows below, keep the format, and type your own:
---        ('Item name', 'Category', 'uom'),
---
--- Valid categories (this exact spelling drives the on-screen order):
---   'Proteins/Mains'  →  'Sauces/Bases'  →  'Pantry/Condiments'  →  'Misc'
--- Anything else still works but sorts to the bottom.
---
--- UOM is free text — kg, g, pcs, pkt, btl, ctn, tray, ltr — whatever the
--- store actually counts in. Count in the unit staff physically handle.
--- =====================================================================
+-- ⚠️ UOM WARNING
+-- Only 5 of these 44 items had a unit in the source list. The other 39
+-- are set to 'pcs' as a placeholder, NOT because that is correct.
+-- Fix them in Manager > Items before staff start using this.
+-- The 5 that are confirmed: Tobiko (pack), Cooking Oil (tin),
+-- Japanese Rice (ctn), Black Pepper (kg), Potato Wedges (kg).
+-- ---------------------------------------------------------------------
 
 insert into public.items (name, category, uom) values
-  ('Chicken Breast',        'Proteins/Mains',    'kg'),
-  ('Chicken Thigh',         'Proteins/Mains',    'kg'),
-  ('Beef Patty',            'Proteins/Mains',    'pcs'),
-  ('Salmon Fillet',         'Proteins/Mains',    'kg'),
+  -- Proteins / Mains (22)
+  ('Angus Beef',          'Proteins/Mains',    'pcs'),
+  ('Beef Pepperoni',      'Proteins/Mains',    'pcs'),
+  ('Chicken Breast',      'Proteins/Mains',    'pcs'),
+  ('Chicken Chop',        'Proteins/Mains',    'pcs'),
+  ('Chicken Pepperoni',   'Proteins/Mains',    'pcs'),
+  ('Chicken Wing',        'Proteins/Mains',    'pcs'),
+  ('Minced Beef',         'Proteins/Mains',    'pcs'),
+  ('Minced Chicken',      'Proteins/Mains',    'pcs'),
+  ('Pasta',               'Proteins/Mains',    'pcs'),
+  ('Perch Fish',          'Proteins/Mains',    'pcs'),
+  ('Perch Fish Cube',     'Proteins/Mains',    'pcs'),
+  ('Roasted Beef',        'Proteins/Mains',    'pcs'),
+  ('Roasted Soup',        'Proteins/Mains',    'pcs'),
+  ('Salmon Don',          'Proteins/Mains',    'pcs'),
+  ('Salmon Ochazuke',     'Proteins/Mains',    'pcs'),
+  ('Salmon Pizza',        'Proteins/Mains',    'pcs'),
+  ('Seafood',             'Proteins/Mains',    'pcs'),
+  ('Shark Meat',          'Proteins/Mains',    'pcs'),
+  ('Smoke Duck Pasta',    'Proteins/Mains',    'pcs'),
+  ('Smoke Duck Pizza',    'Proteins/Mains',    'pcs'),
+  ('Tempura Prawn',       'Proteins/Mains',    'pcs'),
+  ('Unagi',               'Proteins/Mains',    'pcs'),
 
-  ('Tomato Base',           'Sauces/Bases',      'ltr'),
-  ('Mushroom Sauce',        'Sauces/Bases',      'ltr'),
-  ('Chilli Paste',          'Sauces/Bases',      'kg'),
+  -- Sauces / Bases (10)
+  ('Asam Pedas',          'Sauces/Bases',      'pcs'),
+  ('Dashi Powder',        'Sauces/Bases',      'pcs'),
+  ('Dry Curry',           'Sauces/Bases',      'pcs'),
+  ('Fried Powder',        'Sauces/Bases',      'pcs'),
+  ('Japanese Curry',      'Sauces/Bases',      'pcs'),
+  ('Mala Base',           'Sauces/Bases',      'pcs'),
+  ('Mapo Tofu Sauce',     'Sauces/Bases',      'pcs'),
+  ('Mutton Curry',        'Sauces/Bases',      'pcs'),
+  ('Tobiko',              'Sauces/Bases',      'pack'),
+  ('Tomato Bolognese',    'Sauces/Bases',      'pcs'),
 
-  ('All Purpose Flour',     'Pantry/Condiments', 'kg'),
-  ('Caster Sugar',          'Pantry/Condiments', 'kg'),
-  ('Cooking Oil',           'Pantry/Condiments', 'ltr'),
-  ('Salt',                  'Pantry/Condiments', 'kg'),
+  -- Pantry / Condiments (9)
+  ('Black Truffle',       'Pantry/Condiments', 'pcs'),
+  ('Cooking Oil (Tin)',   'Pantry/Condiments', 'tin'),
+  ('Durian Paste',        'Pantry/Condiments', 'pcs'),
+  ('Fried Garlic',        'Pantry/Condiments', 'pcs'),
+  ('Fried Onion',         'Pantry/Condiments', 'pcs'),
+  ('Japanese Rice (Ctn)', 'Pantry/Condiments', 'ctn'),
+  ('Scallion Oil',        'Pantry/Condiments', 'pcs'),
+  ('Teriyaki Sauce',      'Pantry/Condiments', 'pcs'),
+  ('Truffle Sauce',       'Pantry/Condiments', 'pcs'),
 
-  ('Vacuum Bag',            'Misc',              'pcs')
+  -- Misc (3)
+  ('Black Pepper',        'Misc',              'kg'),
+  ('Potato Wedges',       'Misc',              'kg'),
+  ('Spring Chicken',      'Misc',              'pcs')
 on conflict do nothing;
+
+
+-- ---------------------------------------------------------------------
+-- Placeholder staff + branch. Replace via Manager > Staff / Branches.
+-- ---------------------------------------------------------------------
+insert into public.staff (name)    select 'Manager'  where not exists (select 1 from public.staff);
+insert into public.branches (name) select 'Branch 1' where not exists (select 1 from public.branches);
+
+
+-- ---------------------------------------------------------------------
+-- Check the result: should be 44 active items, 22 / 10 / 9 / 3.
+-- ---------------------------------------------------------------------
+-- select category, count(*) from public.items where is_active group by category order by 1;
