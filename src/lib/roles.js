@@ -4,14 +4,19 @@
 
 export const SUPER_ADMIN = "super_admin";
 export const CK_INCHARGE = "ck_incharge";
+export const CK_STAFF = "ck_staff";
 export const BRANCH = "branch";
 
-export const CK_ROLES = [SUPER_ADMIN, CK_INCHARGE];
-export const ALL_ROLES = [SUPER_ADMIN, CK_INCHARGE, BRANCH];
+// Everyone who works at CK Store: Stock In / Stock Out / DOs.
+export const CK_ROLES = [SUPER_ADMIN, CK_INCHARGE, CK_STAFF];
+// CK people who may also use Manager (items, branches, accounts, reports).
+export const CK_MANAGER_ROLES = [SUPER_ADMIN, CK_INCHARGE];
+export const ALL_ROLES = [SUPER_ADMIN, CK_INCHARGE, CK_STAFF, BRANCH];
 
 export const ROLE_LABELS = {
   [SUPER_ADMIN]: "Super Admin",
   [CK_INCHARGE]: "CK Incharge",
+  [CK_STAFF]: "CK Staff",
   [BRANCH]: "Branch",
 };
 
@@ -36,16 +41,16 @@ export const MIN_PASSWORD = 8;
 
 // Where each role lands after logging in.
 export function homeFor(role) {
-  return role === BRANCH ? "/branch" : "/pick";
+  return role === BRANCH ? "/branch" : "/menu";
 }
 
 // Which roles this account may create.
-//   Super Admin → CK Incharge, Branch
-//   CK Incharge → CK Incharge only
+//   Super Admin → CK Incharge, CK Staff, Branch
+//   CK Incharge → CK Incharge, CK Staff
 // Nobody creates a Super Admin from the app.
 export function creatableRoles(callerRole) {
-  if (callerRole === SUPER_ADMIN) return [CK_INCHARGE, BRANCH];
-  if (callerRole === CK_INCHARGE) return [CK_INCHARGE];
+  if (callerRole === SUPER_ADMIN) return [CK_INCHARGE, CK_STAFF, BRANCH];
+  if (callerRole === CK_INCHARGE) return [CK_INCHARGE, CK_STAFF];
   return [];
 }
 
@@ -53,6 +58,6 @@ export function creatableRoles(callerRole) {
 export function canManageUser(caller, target) {
   if (!caller || !target) return false;
   if (caller.role === SUPER_ADMIN) return true;
-  if (caller.role === CK_INCHARGE) return target.role === CK_INCHARGE;
+  if (caller.role === CK_INCHARGE) return [CK_INCHARGE, CK_STAFF].includes(target.role);
   return false;
 }

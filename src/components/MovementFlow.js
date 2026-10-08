@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import Header from "@/components/Header";
 import { supabase } from "@/lib/supabaseClient";
-import { loadStaff } from "@/lib/session";
+import { useProfile } from "@/components/AuthGate";
 import { groupByCategory } from "@/lib/constants";
 
 /**
@@ -31,8 +31,11 @@ import { groupByCategory } from "@/lib/constants";
 export default function MovementFlow({ type }) {
   const isOut = type === "out";
   const router = useRouter();
+  const profile = useProfile();
 
-  const [staff, setStaff] = useState(null);
+  // The logged-in person. The database also stamps this name on every row
+  // itself (migration 006), so the screen cannot record a different name.
+  const staff = { id: null, name: profile.display_name };
   const [items, setItems] = useState([]);
   const [branches, setBranches] = useState([]);
   const [balances, setBalances] = useState({});
@@ -49,13 +52,6 @@ export default function MovementFlow({ type }) {
   const [doNumber, setDoNumber] = useState(null);
 
   useEffect(() => {
-    const person = loadStaff();
-    if (!person) {
-      router.replace("/pick");
-      return;
-    }
-    setStaff(person);
-
     (async () => {
       const [itemsRes, branchesRes, balancesRes] = await Promise.all([
         supabase
@@ -83,7 +79,7 @@ export default function MovementFlow({ type }) {
       }
       setLoading(false);
     })();
-  }, [router]);
+  }, []);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();

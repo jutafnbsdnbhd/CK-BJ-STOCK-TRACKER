@@ -1,45 +1,39 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowDownToLine, ArrowUpFromLine, Settings, Users } from "lucide-react";
+import { ArrowDownToLine, ArrowUpFromLine, LogOut, Settings } from "lucide-react";
 import Header from "@/components/Header";
-import AuthGate from "@/components/AuthGate";
-import { loadStaff, clearStaff } from "@/lib/session";
-import { CK_ROLES } from "@/lib/roles";
+import AuthGate, { useProfile } from "@/components/AuthGate";
+import { signOut } from "@/lib/authClient";
+import { CK_MANAGER_ROLES, CK_ROLES, ROLE_LABELS } from "@/lib/roles";
 
 function MenuScreen() {
   const router = useRouter();
-  const [staff, setStaff] = useState(null);
-
-  useEffect(() => {
-    const person = loadStaff();
-    if (!person) router.replace("/pick");
-    else setStaff(person);
-  }, [router]);
-
-  if (!staff) return null;
+  const profile = useProfile();
+  const isManager = CK_MANAGER_ROLES.includes(profile.role);
 
   return (
     <>
       <Header
-        title={staff.name}
+        title={`${profile.display_name} · ${ROLE_LABELS[profile.role]}`}
         right={
           <div className="flex gap-2">
-            <Link href="/manager" className="btn-ghost text-sm px-3 py-2" aria-label="Manager">
-              <Settings size={15} />
-              <span className="hidden sm:inline">Manager</span>
-            </Link>
+            {isManager ? (
+              <Link href="/manager" className="btn-ghost text-sm px-3 py-2" aria-label="Manager">
+                <Settings size={15} />
+                <span className="hidden sm:inline">Manager</span>
+              </Link>
+            ) : null}
             <button
-              onClick={() => {
-                clearStaff();
-                router.replace("/pick");
-              }}
               className="btn-ghost text-sm px-3 py-2"
+              onClick={async () => {
+                await signOut();
+                router.replace("/");
+              }}
             >
-              <Users size={15} />
-              Switch
+              <LogOut size={15} />
+              <span className="hidden sm:inline">Log out</span>
             </button>
           </div>
         }
@@ -70,6 +64,11 @@ function MenuScreen() {
             <span className="block text-sm text-muted mt-0.5">Send stock to a branch</span>
           </span>
         </Link>
+
+        <p className="text-xs text-muted text-center mt-2">
+          Everything you log is recorded under <span className="font-semibold text-ink">{profile.display_name}</span>.
+          Shared device? Log out when your shift ends.
+        </p>
       </main>
     </>
   );

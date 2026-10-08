@@ -8,6 +8,7 @@ import { authFetch } from "@/lib/authClient";
 import {
   BRANCH,
   CK_INCHARGE,
+  CK_STAFF,
   MIN_PASSWORD,
   ROLE_LABELS,
   SUPER_ADMIN,
@@ -17,12 +18,12 @@ import {
   normalizeUsername,
 } from "@/lib/roles";
 
-const GROUP_ORDER = [SUPER_ADMIN, CK_INCHARGE, BRANCH];
+const GROUP_ORDER = [SUPER_ADMIN, CK_INCHARGE, CK_STAFF, BRANCH];
 
 /**
  * Accounts. Who can do what:
- *   Super Admin → create CK Incharge + Branch accounts, manage everyone
- *   CK Incharge → create + manage CK Incharge accounts only
+ *   Super Admin → create CK Incharge, CK Staff + Branch accounts, manage everyone
+ *   CK Incharge → create + manage CK Incharge and CK Staff accounts
  * Accounts are never deleted — deactivate instead, history stays intact.
  */
 export default function UsersTab() {
@@ -144,7 +145,7 @@ export default function UsersTab() {
           <div className="grid gap-2 sm:grid-cols-2">
             <input
               className="input"
-              placeholder="Display name e.g. TRX Outlet"
+              placeholder="Display name — real name for CK people, e.g. Chamee"
               value={draft.display_name}
               onChange={(e) => setDraft({ ...draft, display_name: e.target.value })}
             />

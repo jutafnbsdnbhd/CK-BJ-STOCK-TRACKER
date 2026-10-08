@@ -8,9 +8,9 @@ import HistoryTab from "@/components/manager/HistoryTab";
 import CrudTab from "@/components/manager/CrudTab";
 import DeliveryOrdersTab from "@/components/manager/DeliveryOrdersTab";
 import UsersTab from "@/components/manager/UsersTab";
-import { CK_ROLES } from "@/lib/roles";
+import { CK_MANAGER_ROLES } from "@/lib/roles";
 
-const TABS = ["Overview", "Delivery Orders", "Items", "Staff", "Branches", "History", "Users"];
+const TABS = ["Overview", "Delivery Orders", "Items", "Branches", "History", "Users"];
 
 function ManagerScreen() {
   const [tab, setTab] = useState("Overview");
@@ -50,7 +50,6 @@ function ManagerScreen() {
             ]}
           />
         ) : null}
-        {tab === "Staff" ? <CrudTab endpoint="staff" label="staff member" /> : null}
         {tab === "Branches" ? <CrudTab endpoint="branches" label="branch" /> : null}
         {tab === "History" ? <HistoryTab /> : null}
         {tab === "Users" ? <UsersTab /> : null}
@@ -61,7 +60,7 @@ function ManagerScreen() {
 
 export default function ManagerPage() {
   return (
-    <AuthGate allow={CK_ROLES}>
+    <AuthGate allow={CK_MANAGER_ROLES}>
       <ManagerScreen />
     </AuthGate>
   );

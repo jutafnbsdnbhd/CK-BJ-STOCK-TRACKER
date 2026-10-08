@@ -1,7 +1,7 @@
 import { requireRoles } from "@/lib/apiAuth";
 import {
   BRANCH,
-  CK_ROLES,
+  CK_MANAGER_ROLES,
   MIN_PASSWORD,
   canManageUser,
   creatableRoles,
@@ -22,7 +22,7 @@ function bad(message, status = 400) {
 
 // ---------------------------------------------------------------- list
 export async function GET(request) {
-  const caller = await requireRoles(request, CK_ROLES);
+  const caller = await requireRoles(request, CK_MANAGER_ROLES);
   if (caller.error) return caller.error;
 
   const { data, error } = await caller.admin
@@ -37,7 +37,7 @@ export async function GET(request) {
 
 // -------------------------------------------------------------- create
 export async function POST(request) {
-  const caller = await requireRoles(request, CK_ROLES);
+  const caller = await requireRoles(request, CK_MANAGER_ROLES);
   if (caller.error) return caller.error;
   const { admin, profile } = caller;
 
@@ -115,7 +115,7 @@ export async function POST(request) {
 // body: { id, action: "reset_password" | "deactivate" | "activate" | "rename",
 //         password?, display_name? }
 export async function PATCH(request) {
-  const caller = await requireRoles(request, CK_ROLES);
+  const caller = await requireRoles(request, CK_MANAGER_ROLES);
   if (caller.error) return caller.error;
   const { admin, profile } = caller;
 

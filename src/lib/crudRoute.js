@@ -1,7 +1,7 @@
 import "server-only";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireRoles } from "@/lib/apiAuth";
-import { CK_ROLES } from "@/lib/roles";
+import { CK_MANAGER_ROLES } from "@/lib/roles";
 
 /**
  * Manager CRUD over one master table, using the service role key server-side.
@@ -24,7 +24,7 @@ export function crudRoute(table, allowedFields) {
 
   return {
     async GET(request) {
-      const caller = await requireRoles(request, CK_ROLES);
+      const caller = await requireRoles(request, CK_MANAGER_ROLES);
       if (caller.error) return caller.error;
 
       const { data, error } = await supabaseAdmin()
@@ -36,7 +36,7 @@ export function crudRoute(table, allowedFields) {
     },
 
     async POST(request) {
-      const caller = await requireRoles(request, CK_ROLES);
+      const caller = await requireRoles(request, CK_MANAGER_ROLES);
       if (caller.error) return caller.error;
 
       const body = await request.json().catch(() => ({}));
@@ -56,7 +56,7 @@ export function crudRoute(table, allowedFields) {
     },
 
     async PATCH(request) {
-      const caller = await requireRoles(request, CK_ROLES);
+      const caller = await requireRoles(request, CK_MANAGER_ROLES);
       if (caller.error) return caller.error;
 
       const body = await request.json().catch(() => ({}));
@@ -79,7 +79,7 @@ export function crudRoute(table, allowedFields) {
     },
 
     async DELETE(request) {
-      const caller = await requireRoles(request, CK_ROLES);
+      const caller = await requireRoles(request, CK_MANAGER_ROLES);
       if (caller.error) return caller.error;
 
       const { searchParams } = new URL(request.url);

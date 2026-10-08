@@ -1,7 +1,6 @@
 "use client";
 
 import { supabase } from "@/lib/supabaseClient";
-import { clearStaff } from "@/lib/session";
 
 // fetch() that carries the logged-in session, so /api/* routes know who is
 // asking. The server checks the role on every request — this header is the
@@ -18,6 +17,5 @@ export async function authFetch(url, options = {}) {
 }
 
 export async function signOut() {
-  clearStaff();
   await supabase.auth.signOut();
 }
