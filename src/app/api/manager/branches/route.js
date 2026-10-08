@@ -2,7 +2,7 @@ import { crudRoute } from "@/lib/crudRoute";
 
 export const dynamic = "force-dynamic";
 
-const handlers = crudRoute("branches", ["name", "is_active"]);
+const handlers = crudRoute("branches", ["name", "code", "is_active"]);
 
 export const GET = handlers.GET;
 export const POST = handlers.POST;

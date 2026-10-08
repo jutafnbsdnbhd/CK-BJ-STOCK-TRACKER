@@ -13,6 +13,15 @@ import { CK_MANAGER_ROLES } from "@/lib/roles";
  * fail on the foreign key or orphan history. Deactivating hides it from the
  * staff screens while every past movement still reads correctly.
  */
+// Turn database errors into something a manager can act on.
+function friendly(error) {
+  if (error.code === "23505") return "That name or code is already used by another row";
+  if (error.code === "23514" && /code/i.test(error.message)) {
+    return "Code must be 2–5 capital letters, e.g. TRX";
+  }
+  return error.message;
+}
+
 export function crudRoute(table, allowedFields) {
   function clean(body) {
     const out = {};
@@ -31,7 +40,7 @@ export function crudRoute(table, allowedFields) {
         .from(table)
         .select("*")
         .order("name");
-      if (error) return Response.json({ error: error.message }, { status: 500 });
+      if (error) return Response.json({ error: friendly(error) }, { status: 400 });
       return Response.json({ data });
     },
 
@@ -51,7 +60,7 @@ export function crudRoute(table, allowedFields) {
         .insert(payload)
         .select()
         .single();
-      if (error) return Response.json({ error: error.message }, { status: 500 });
+      if (error) return Response.json({ error: friendly(error) }, { status: 400 });
       return Response.json({ data });
     },
 
@@ -74,7 +83,7 @@ export function crudRoute(table, allowedFields) {
         .eq("id", body.id)
         .select()
         .single();
-      if (error) return Response.json({ error: error.message }, { status: 500 });
+      if (error) return Response.json({ error: friendly(error) }, { status: 400 });
       return Response.json({ data });
     },
 
@@ -90,7 +99,7 @@ export function crudRoute(table, allowedFields) {
         .from(table)
         .update({ is_active: false })
         .eq("id", id);
-      if (error) return Response.json({ error: error.message }, { status: 500 });
+      if (error) return Response.json({ error: friendly(error) }, { status: 400 });
       return Response.json({ ok: true });
     },
   };

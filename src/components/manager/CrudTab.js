@@ -16,6 +16,9 @@ export default function CrudTab({ endpoint, label, fields = [] }) {
   const [draft, setDraft] = useState({});
   const [busy, setBusy] = useState(false);
   const [showInactive, setShowInactive] = useState(false);
+  // Bumped on every reload so the edit boxes refresh to what the database
+  // actually saved (e.g. "trx" → "TRX", or back to the old value on error).
+  const [version, setVersion] = useState(0);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -25,6 +28,7 @@ export default function CrudTab({ endpoint, label, fields = [] }) {
     else {
       setRows(json.data || []);
       setError(null);
+      setVersion((v) => v + 1);
     }
     setLoading(false);
   }, [endpoint]);
@@ -44,6 +48,7 @@ export default function CrudTab({ endpoint, label, fields = [] }) {
     const json = await res.json().catch(() => ({}));
     setBusy(false);
     if (!res.ok) {
+      await load();
       setError(json.error || "Something went wrong");
       return false;
     }
@@ -124,7 +129,7 @@ export default function CrudTab({ endpoint, label, fields = [] }) {
           ) : (
             visible.map((row) => (
               <div
-                key={row.id}
+                key={`${row.id}-${version}`}
                 className={`px-3 py-2.5 grid gap-2 sm:grid-cols-[1fr_auto] items-center ${
                   row.is_active ? "" : "opacity-50"
                 }`}
@@ -154,10 +159,10 @@ export default function CrudTab({ endpoint, label, fields = [] }) {
                       <input
                         key={f.key}
                         className="input py-2"
-                        defaultValue={row[f.key]}
+                        defaultValue={row[f.key] ?? ""}
                         placeholder={f.placeholder}
                         onBlur={(e) =>
-                          e.target.value !== row[f.key] &&
+                          e.target.value !== (row[f.key] ?? "") &&
                           send("PATCH", { id: row.id, [f.key]: e.target.value })
                         }
                       />

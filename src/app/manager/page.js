@@ -50,7 +50,13 @@ function ManagerScreen() {
             ]}
           />
         ) : null}
-        {tab === "Branches" ? <CrudTab endpoint="branches" label="branch" /> : null}
+        {tab === "Branches" ? (
+          <CrudTab
+            endpoint="branches"
+            label="branch"
+            fields={[{ key: "code", placeholder: "Code e.g. TRX", default: "" }]}
+          />
+        ) : null}
         {tab === "History" ? <HistoryTab /> : null}
         {tab === "Users" ? <UsersTab /> : null}
       </main>
