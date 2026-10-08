@@ -1,82 +1,164 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { Lock, User, Loader2 } from "lucide-react";
+import { Suspense, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Eye, EyeOff, Loader2, LogIn, Package } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
-import { saveStaff } from "@/lib/session";
-import { KITCHEN_NAME } from "@/lib/constants";
+import { signOut } from "@/lib/authClient";
+import { homeFor, usernameToEmail, normalizeUsername } from "@/lib/roles";
+import { KITCHEN_NAME, KITCHEN_LOCATION } from "@/lib/constants";
 
-export default function HomePage() {
+/**
+ * Login. Username + password for every account.
+ * Already logged in on this device → straight to that account's home page.
+ */
+function LoginScreen() {
   const router = useRouter();
-  const [staff, setStaff] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const params = useSearchParams();
+
+  const [checking, setChecking] = useState(true);
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(
+    params.get("inactive") ? "This account has been deactivated. Ask your manager." : null
+  );
+
+  async function goHome(userId) {
+    const { data: profile } = await supabase
+      .from("app_users")
+      .select("role, is_active")
+      .eq("id", userId)
+      .maybeSingle();
+
+    if (!profile || !profile.is_active) {
+      await signOut();
+      setError(
+        profile
+          ? "This account has been deactivated. Ask your manager."
+          : "This login is not set up yet. Ask your manager."
+      );
+      return false;
+    }
+    router.replace(homeFor(profile.role));
+    return true;
+  }
 
   useEffect(() => {
     (async () => {
-      const { data, error } = await supabase
-        .from("staff")
-        .select("id, name")
-        .eq("is_active", true)
-        .order("name");
-      if (error) setError(error.message);
-      else setStaff(data || []);
-      setLoading(false);
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (session && (await goHome(session.user.id))) return;
+      setChecking(false);
     })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  function pick(person) {
-    saveStaff(person);
-    router.push("/menu");
+  async function submit(e) {
+    e.preventDefault();
+    setBusy(true);
+    setError(null);
+
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: usernameToEmail(username),
+      password,
+    });
+
+    if (error || !data?.user) {
+      setBusy(false);
+      setError(
+        /banned/i.test(error?.message || "")
+          ? "This account has been deactivated. Ask your manager."
+          : "Wrong username or password."
+      );
+      return;
+    }
+
+    const ok = await goHome(data.user.id);
+    if (!ok) setBusy(false);
+  }
+
+  if (checking) {
+    return (
+      <div className="flex items-center gap-2 text-muted py-20 justify-center">
+        <Loader2 className="animate-spin" size={18} />
+      </div>
+    );
   }
 
   return (
-    <main className="mx-auto max-w-2xl px-4 pb-16">
-      <div className="flex items-start justify-between pt-8 pb-6">
-        <div>
-          <p className="text-sm text-muted">A&rsquo;rest {KITCHEN_NAME}</p>
-          <h1 className="text-2xl font-bold mt-0.5">Central Kitchen Stock</h1>
-        </div>
-        <Link href="/manager" className="btn-ghost text-sm px-3 py-2">
-          <Lock size={15} />
-          Manager
-        </Link>
+    <main className="mx-auto max-w-sm px-4 py-16">
+      <div className="grid place-items-center w-16 h-16 rounded-2xl bg-accent text-white mx-auto mb-5 shadow-sm">
+        <Package size={30} />
       </div>
+      <h1 className="text-2xl font-bold text-center">{KITCHEN_NAME}</h1>
+      <p className="text-sm text-muted text-center mt-1">{KITCHEN_LOCATION} &middot; Stock &amp; Orders</p>
 
-      <h2 className="text-sm font-semibold text-muted mb-3">Who are you?</h2>
+      <form onSubmit={submit} className="mt-8 grid gap-3">
+        <div>
+          <label className="label" htmlFor="username">
+            Username
+          </label>
+          <input
+            id="username"
+            className="input"
+            value={username}
+            onChange={(e) => setUsername(normalizeUsername(e.target.value))}
+            autoComplete="username"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            placeholder="e.g. uptown"
+          />
+        </div>
 
-      {loading ? (
-        <div className="flex items-center gap-2 text-muted py-10 justify-center">
-          <Loader2 className="animate-spin" size={18} />
-          Loading&hellip;
-        </div>
-      ) : error ? (
-        <div className="card p-4 text-sm text-red-700 bg-red-50 border-red-200">
-          Could not load staff list: {error}
-        </div>
-      ) : staff.length === 0 ? (
-        <div className="card p-5 text-sm text-muted">
-          No staff have been added yet. Go to <span className="font-semibold text-ink">Manager &rsaquo; Staff</span> and
-          add the people who will be logging stock.
-        </div>
-      ) : (
-        <div className="grid gap-2.5">
-          {staff.map((person) => (
+        <div>
+          <label className="label" htmlFor="password">
+            Password
+          </label>
+          <div className="relative">
+            <input
+              id="password"
+              type={showPassword ? "text" : "password"}
+              className="input pr-11"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="current-password"
+            />
             <button
-              key={person.id}
-              onClick={() => pick(person)}
-              className="card px-4 py-4 flex items-center gap-3 text-left hover:border-accent transition active:scale-[.99]"
+              type="button"
+              onClick={() => setShowPassword((v) => !v)}
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-muted"
+              aria-label={showPassword ? "Hide password" : "Show password"}
             >
-              <span className="grid place-items-center w-10 h-10 rounded-full bg-base text-accent shrink-0">
-                <User size={18} />
-              </span>
-              <span className="font-semibold">{person.name}</span>
+              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
-          ))}
+          </div>
         </div>
-      )}
+
+        {error ? (
+          <p className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-xl p-3">{error}</p>
+        ) : null}
+
+        <button className="btn-primary mt-2" disabled={busy || !username || !password}>
+          {busy ? <Loader2 className="animate-spin" size={18} /> : <LogIn size={18} />}
+          Log in
+        </button>
+      </form>
+
+      <p className="text-xs text-muted text-center mt-8">
+        Forgot your password? Ask your CK Incharge or the Super Admin to reset it.
+      </p>
     </main>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginScreen />
+    </Suspense>
   );
 }

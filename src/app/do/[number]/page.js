@@ -6,9 +6,13 @@ import { ChevronLeft, Loader2, Printer } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import DeliveryOrderDoc from "@/components/DeliveryOrderDoc";
 import { COMPANY } from "@/lib/company";
+import AuthGate, { useProfile } from "@/components/AuthGate";
+import { ALL_ROLES, homeFor } from "@/lib/roles";
 
-export default function DeliveryOrderPage({ params }) {
+function DeliveryOrderScreen({ params }) {
   const number = decodeURIComponent(params.number);
+  const profile = useProfile();
+  const backHref = profile?.role === "branch" ? homeFor("branch") : "/menu";
   const [order, setOrder] = useState(null);
   const [lines, setLines] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -61,7 +65,7 @@ export default function DeliveryOrderPage({ params }) {
     return (
       <main className="mx-auto max-w-md px-4 py-16 text-center">
         <p className="card p-5 text-sm text-red-700 bg-red-50 border-red-200">{error}</p>
-        <Link href="/menu" className="btn-ghost mt-5">
+        <Link href={backHref} className="btn-ghost mt-5">
           Back to menu
         </Link>
       </main>
@@ -74,7 +78,7 @@ export default function DeliveryOrderPage({ params }) {
       <div className="no-print sticky top-0 z-20 bg-base/95 backdrop-blur border-b border-line">
         <div className="mx-auto max-w-3xl px-4 py-3 flex items-center gap-3">
           <Link
-            href="/menu"
+            href={backHref}
             className="shrink-0 rounded-lg p-1.5 -ml-1.5 hover:bg-white active:scale-95 transition"
             aria-label="Back"
           >
@@ -120,5 +124,13 @@ export default function DeliveryOrderPage({ params }) {
         </div>
       </main>
     </>
+  );
+}
+
+export default function DeliveryOrderPage({ params }) {
+  return (
+    <AuthGate allow={ALL_ROLES}>
+      <DeliveryOrderScreen params={params} />
+    </AuthGate>
   );
 }

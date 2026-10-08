@@ -1,9 +1,12 @@
 import "server-only";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { requireManager } from "@/lib/managerAuth";
+import { requireRoles } from "@/lib/apiAuth";
+import { CK_ROLES } from "@/lib/roles";
 
 /**
  * Manager CRUD over one master table, using the service role key server-side.
+ * Only CK accounts (Super Admin, CK Incharge) get through — checked on every
+ * request from the login token, never from anything the screen claims.
  *
  * DELETE is a soft delete (is_active = false), never a hard one. Items and
  * branches are referenced by the movement ledger; removing a row would either
@@ -20,9 +23,9 @@ export function crudRoute(table, allowedFields) {
   }
 
   return {
-    async GET() {
-      const denied = requireManager();
-      if (denied) return denied;
+    async GET(request) {
+      const caller = await requireRoles(request, CK_ROLES);
+      if (caller.error) return caller.error;
 
       const { data, error } = await supabaseAdmin()
         .from(table)
@@ -33,8 +36,8 @@ export function crudRoute(table, allowedFields) {
     },
 
     async POST(request) {
-      const denied = requireManager();
-      if (denied) return denied;
+      const caller = await requireRoles(request, CK_ROLES);
+      if (caller.error) return caller.error;
 
       const body = await request.json().catch(() => ({}));
       const payload = clean(body);
@@ -53,8 +56,8 @@ export function crudRoute(table, allowedFields) {
     },
 
     async PATCH(request) {
-      const denied = requireManager();
-      if (denied) return denied;
+      const caller = await requireRoles(request, CK_ROLES);
+      if (caller.error) return caller.error;
 
       const body = await request.json().catch(() => ({}));
       if (!body.id) return Response.json({ error: "id is required" }, { status: 400 });
@@ -76,8 +79,8 @@ export function crudRoute(table, allowedFields) {
     },
 
     async DELETE(request) {
-      const denied = requireManager();
-      if (denied) return denied;
+      const caller = await requireRoles(request, CK_ROLES);
+      if (caller.error) return caller.error;
 
       const { searchParams } = new URL(request.url);
       const id = searchParams.get("id");

@@ -51,7 +51,7 @@ export default function MovementFlow({ type }) {
   useEffect(() => {
     const person = loadStaff();
     if (!person) {
-      router.replace("/");
+      router.replace("/pick");
       return;
     }
     setStaff(person);

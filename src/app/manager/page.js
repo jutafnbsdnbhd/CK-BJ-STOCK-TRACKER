@@ -1,57 +1,23 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { Loader2, LogOut } from "lucide-react";
+import { useState } from "react";
 import Header from "@/components/Header";
-import ManagerLogin from "@/components/ManagerLogin";
+import AuthGate from "@/components/AuthGate";
 import OverviewTab from "@/components/manager/OverviewTab";
 import HistoryTab from "@/components/manager/HistoryTab";
 import CrudTab from "@/components/manager/CrudTab";
 import DeliveryOrdersTab from "@/components/manager/DeliveryOrdersTab";
+import UsersTab from "@/components/manager/UsersTab";
+import { CK_ROLES } from "@/lib/roles";
 
-const TABS = ["Overview", "Delivery Orders", "Items", "Staff", "Branches", "History"];
+const TABS = ["Overview", "Delivery Orders", "Items", "Staff", "Branches", "History", "Users"];
 
-export default function ManagerPage() {
-  const router = useRouter();
-  const [authed, setAuthed] = useState(null);
+function ManagerScreen() {
   const [tab, setTab] = useState("Overview");
-
-  useEffect(() => {
-    fetch("/api/manager/session")
-      .then((r) => r.json())
-      .then((j) => setAuthed(!!j.authed))
-      .catch(() => setAuthed(false));
-  }, []);
-
-  if (authed === null) {
-    return (
-      <div className="flex items-center gap-2 text-muted py-20 justify-center">
-        <Loader2 className="animate-spin" size={18} />
-      </div>
-    );
-  }
-
-  if (!authed) return <ManagerLogin onSuccess={() => setAuthed(true)} />;
 
   return (
     <>
-      <Header
-        title="Manager"
-        back="/"
-        right={
-          <button
-            className="btn-ghost text-sm px-3 py-2"
-            onClick={async () => {
-              await fetch("/api/manager/logout", { method: "POST" });
-              router.push("/");
-            }}
-          >
-            <LogOut size={15} />
-            Exit
-          </button>
-        }
-      />
+      <Header title="Manager" back="/menu" />
 
       <div className="sticky top-[61px] z-10 bg-base/95 backdrop-blur border-b border-line">
         <div className="mx-auto max-w-4xl px-4 flex gap-1 overflow-x-auto">
@@ -87,7 +53,16 @@ export default function ManagerPage() {
         {tab === "Staff" ? <CrudTab endpoint="staff" label="staff member" /> : null}
         {tab === "Branches" ? <CrudTab endpoint="branches" label="branch" /> : null}
         {tab === "History" ? <HistoryTab /> : null}
+        {tab === "Users" ? <UsersTab /> : null}
       </main>
     </>
+  );
+}
+
+export default function ManagerPage() {
+  return (
+    <AuthGate allow={CK_ROLES}>
+      <ManagerScreen />
+    </AuthGate>
   );
 }

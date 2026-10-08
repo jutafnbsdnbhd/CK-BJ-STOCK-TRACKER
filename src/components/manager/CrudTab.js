@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Loader2, Plus, Trash2, Undo2 } from "lucide-react";
 import { CATEGORY_ORDER } from "@/lib/constants";
+import { authFetch } from "@/lib/authClient";
 
 /**
  * Generic manager CRUD table for items / staff / branches.
@@ -18,7 +19,7 @@ export default function CrudTab({ endpoint, label, fields = [] }) {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const res = await fetch(`/api/manager/${endpoint}`);
+    const res = await authFetch(`/api/manager/${endpoint}`);
     const json = await res.json().catch(() => ({}));
     if (!res.ok) setError(json.error || "Could not load");
     else {
@@ -35,7 +36,7 @@ export default function CrudTab({ endpoint, label, fields = [] }) {
   async function send(method, body, query = "") {
     setBusy(true);
     setError(null);
-    const res = await fetch(`/api/manager/${endpoint}${query}`, {
+    const res = await authFetch(`/api/manager/${endpoint}${query}`, {
       method,
       headers: body ? { "Content-Type": "application/json" } : undefined,
       body: body ? JSON.stringify(body) : undefined,

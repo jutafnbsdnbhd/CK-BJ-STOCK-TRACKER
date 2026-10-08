@@ -3,17 +3,19 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowDownToLine, ArrowUpFromLine, LogOut } from "lucide-react";
+import { ArrowDownToLine, ArrowUpFromLine, Settings, Users } from "lucide-react";
 import Header from "@/components/Header";
+import AuthGate from "@/components/AuthGate";
 import { loadStaff, clearStaff } from "@/lib/session";
+import { CK_ROLES } from "@/lib/roles";
 
-export default function MenuPage() {
+function MenuScreen() {
   const router = useRouter();
   const [staff, setStaff] = useState(null);
 
   useEffect(() => {
     const person = loadStaff();
-    if (!person) router.replace("/");
+    if (!person) router.replace("/pick");
     else setStaff(person);
   }, [router]);
 
@@ -24,16 +26,22 @@ export default function MenuPage() {
       <Header
         title={staff.name}
         right={
-          <button
-            onClick={() => {
-              clearStaff();
-              router.replace("/");
-            }}
-            className="btn-ghost text-sm px-3 py-2"
-          >
-            <LogOut size={15} />
-            Switch
-          </button>
+          <div className="flex gap-2">
+            <Link href="/manager" className="btn-ghost text-sm px-3 py-2" aria-label="Manager">
+              <Settings size={15} />
+              <span className="hidden sm:inline">Manager</span>
+            </Link>
+            <button
+              onClick={() => {
+                clearStaff();
+                router.replace("/pick");
+              }}
+              className="btn-ghost text-sm px-3 py-2"
+            >
+              <Users size={15} />
+              Switch
+            </button>
+          </div>
         }
       />
       <main className="mx-auto max-w-2xl px-4 py-6 grid gap-4">
@@ -64,5 +72,13 @@ export default function MenuPage() {
         </Link>
       </main>
     </>
+  );
+}
+
+export default function MenuPage() {
+  return (
+    <AuthGate allow={CK_ROLES}>
+      <MenuScreen />
+    </AuthGate>
   );
 }

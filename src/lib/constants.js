@@ -8,7 +8,8 @@ export const CATEGORY_ORDER = [
   "Off Season",
 ];
 
-export const KITCHEN_NAME = "Bukit Jalil";
+export const KITCHEN_NAME = "CK Store";
+export const KITCHEN_LOCATION = "Bukit Jalil";
 
 export function sortCategories(categories) {
   return [...categories].sort((a, b) => {

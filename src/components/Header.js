@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
-import { KITCHEN_NAME } from "@/lib/constants";
+import { KITCHEN_NAME, KITCHEN_LOCATION } from "@/lib/constants";
 
 export default function Header({ title, back, right }) {
   return (
@@ -19,7 +19,7 @@ export default function Header({ title, back, right }) {
         ) : null}
         <div className="min-w-0 flex-1">
           <h1 className="text-base font-semibold truncate">{title}</h1>
-          <p className="text-xs text-muted truncate">A&rsquo;rest {KITCHEN_NAME} Central Kitchen</p>
+          <p className="text-xs text-muted truncate">{KITCHEN_NAME} &middot; {KITCHEN_LOCATION}</p>
         </div>
         {right}
       </div>
