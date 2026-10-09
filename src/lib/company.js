@@ -16,6 +16,10 @@ export const COMPANY = {
   docTitle: "DELIVERY ORDER",
   attention: "ATT: MR HONG — 012 7638835",
 
+  poTitle: "PURCHASE ORDER",
+  poTo: "To: CK Store — JUTA FNB SDN BHD, Bukit Jalil",
+  poFooter: "Subject to CK Store availability. Final quantities as per Delivery Order.",
+
   // Browser print header / tab title
   pageTitle: "Kitchen Delivery Order — Bukit Jalil",
 };
