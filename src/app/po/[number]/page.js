@@ -4,13 +4,16 @@ import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
+  Ban,
   CalendarDays,
   CheckCircle2,
   Download,
   Eye,
+  FileText,
   Loader2,
   Share2,
   Store,
+  Truck,
   User,
   XCircle,
 } from "lucide-react";
@@ -21,7 +24,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { groupByCategory } from "@/lib/constants";
 import { formatDate, formatDateTime } from "@/lib/dates";
 import { buildPoPdfFile, canShareFiles, downloadFile } from "@/lib/poPdf";
-import { ALL_ROLES, BRANCH, SUPER_ADMIN } from "@/lib/roles";
+import { ALL_ROLES, BRANCH, CK_ROLES, SUPER_ADMIN } from "@/lib/roles";
 
 function fmtQty(n) {
   const v = Number(n);
@@ -31,7 +34,7 @@ function fmtQty(n) {
 /**
  * One Purchase Order.
  *  Branch: share the PDF to the CK WhatsApp group, cancel while "Submitted".
- *  CK: view it (Convert to DO arrives in Phase 3).
+ *  CK: Convert to DO, or Reject with a reason.
  *
  * The PDF is built as soon as the page loads, so the Share button can hand
  * it over INSTANTLY when tapped — iPhones refuse to share if there is any
@@ -59,7 +62,7 @@ function PoScreen({ number }) {
     const { data: header, error: headerError } = await supabase
       .from("purchase_orders")
       .select(
-        "id, po_number, status, po_date, delivery_date, ordered_by, note, created_at, cancelled_at, branch_id, branches(name, code)"
+        "id, po_number, status, po_date, delivery_date, ordered_by, note, created_at, cancelled_at, converted_at, rejected_at, reject_reason, branch_id, branches(name, code), delivery_orders(do_number)"
       )
       .eq("po_number", number)
       .maybeSingle();
@@ -149,6 +152,23 @@ function PoScreen({ number }) {
     setTimeout(() => URL.revokeObjectURL(url), 60_000);
   }
 
+  async function rejectPo() {
+    const reason = window.prompt(
+      `Reject ${po.po_number} from ${po.branches?.name}?\nThe branch will see this reason:`
+    );
+    if (reason === null) return;
+    if (!reason.trim()) {
+      setActionError("A reason is required to reject.");
+      return;
+    }
+    setCancelling(true);
+    setActionError(null);
+    const { error } = await supabase.rpc("reject_po", { p_po_id: po.id, p_reason: reason.trim() });
+    setCancelling(false);
+    if (error) setActionError(error.message);
+    else await load();
+  }
+
   async function cancelPo() {
     if (!window.confirm(`Cancel ${po.po_number}?\nIf already shared in WhatsApp, tell the CK group it is cancelled.`)) return;
     setCancelling(true);
@@ -159,7 +179,8 @@ function PoScreen({ number }) {
     else await load();
   }
 
-  const backHref = profile.role === BRANCH ? "/branch" : profile.role === SUPER_ADMIN ? "/branch" : "/menu";
+  const isCK = CK_ROLES.includes(profile.role);
+  const backHref = profile.role === BRANCH ? "/branch" : "/pending-pos";
   const canCancel =
     po?.status === "submitted" &&
     (profile.role === SUPER_ADMIN || (profile.role === BRANCH && po.branch_id === profile.branch_id));
@@ -229,8 +250,44 @@ function PoScreen({ number }) {
           ) : null}
         </div>
 
+        {/* Outcome */}
+        {po.status === "converted" && po.delivery_orders?.do_number ? (
+          <Link
+            href={`/do/${po.delivery_orders.do_number}`}
+            className="card p-4 mt-4 flex items-center gap-3 border-green-200 bg-green-50"
+          >
+            <FileText className="text-green-700 shrink-0" size={20} />
+            <div className="text-sm text-green-900 flex-1">
+              <p className="font-bold">Delivery Order {po.delivery_orders.do_number}</p>
+              <p>Issued {formatDateTime(po.converted_at)} · tap to view</p>
+            </div>
+          </Link>
+        ) : null}
+        {po.status === "rejected" ? (
+          <div className="card p-4 mt-4 flex items-start gap-3 border-red-200 bg-red-50">
+            <Ban className="text-red-600 shrink-0 mt-0.5" size={20} />
+            <div className="text-sm text-red-900">
+              <p className="font-bold">Rejected by CK Store</p>
+              <p className="mt-0.5">Reason: {po.reject_reason}</p>
+              <p className="text-xs mt-1">{formatDateTime(po.rejected_at)}</p>
+            </div>
+          </div>
+        ) : null}
+
+        {/* CK actions */}
+        {isCK && po.status === "submitted" ? (
+          <div className="grid gap-2.5 mt-4">
+            <Link href={`/po/${encodeURIComponent(po.po_number)}/convert`} className="btn-primary">
+              <Truck size={18} /> Convert to Delivery Order
+            </Link>
+            <button className="btn-ghost text-red-600" onClick={rejectPo} disabled={cancelling}>
+              <Ban size={17} /> Reject PO
+            </button>
+          </div>
+        ) : null}
+
         {/* Share */}
-        {isBranchSide && po.status !== "cancelled" ? (
+        {isBranchSide && po.status === "submitted" ? (
           <div className="grid gap-2.5 mt-4">
             <button className="btn-primary" onClick={share} disabled={!pdfFile}>
               {!pdfFile && !pdfError ? (

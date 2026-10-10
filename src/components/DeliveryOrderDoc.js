@@ -11,7 +11,18 @@ import { groupByCategory } from "@/lib/constants";
  * Only the items actually being sent appear. The paper template lists every
  * item as a blank checklist; a generated DO is a record of one delivery.
  */
-export default function DeliveryOrderDoc({ order, lines }) {
+function fmtQty(n) {
+  const v = Number(n);
+  return Number.isInteger(v) ? String(v) : String(Number(v.toFixed(3)));
+}
+
+/**
+ * When the DO was made from a PO (`po` is set), every ordered line is shown
+ * with ORDERED and SENT side by side; lines CK could not send print as
+ * "Not available". A manual Stock Out DO prints exactly as before.
+ */
+export default function DeliveryOrderDoc({ order, lines, po = null }) {
+  const fromPo = Boolean(po);
   const grouped = groupByCategory(
     lines.map((l) => ({
       ...l,
@@ -52,7 +63,7 @@ export default function DeliveryOrderDoc({ order, lines }) {
               <span className="do-value">{order.staff_name}</span>
             </td>
             <td>
-              <span className="do-label">Date</span>
+              <span className="do-label">{fromPo ? "Delivery Date" : "Date"}</span>
               <span className="do-value">{order.do_date}</span>
             </td>
             <td className="do-right">
@@ -60,15 +71,33 @@ export default function DeliveryOrderDoc({ order, lines }) {
               <span className="do-value">{order.branches?.name || "—"}</span>
             </td>
           </tr>
+          {fromPo ? (
+            <tr>
+              <td>
+                <span className="do-label">PO NO.</span>
+                <span className="do-value">{po.po_number}</span>
+              </td>
+              <td>
+                <span className="do-label">Ordered By</span>
+                <span className="do-value">{po.ordered_by}</span>
+              </td>
+              <td>
+                <span className="do-label">PO Date</span>
+                <span className="do-value">{po.po_date}</span>
+              </td>
+              <td className="do-right" />
+            </tr>
+          ) : null}
         </tbody>
       </table>
 
       {/* Lines ------------------------------------------------------ */}
-      <table className="do-table">
+      <table className={fromPo ? "do-table do-table-po" : "do-table"}>
         <thead>
           <tr>
             <th className="do-col-item">ITEM NAME</th>
-            <th className="do-col-qty">QTY</th>
+            {fromPo ? <th className="do-col-qty">ORDERED</th> : null}
+            <th className="do-col-qty">{fromPo ? "SENT" : "QTY"}</th>
             <th className="do-col-unit">UNIT</th>
             <th className="do-col-check">PACKED &#10003;</th>
             <th className="do-col-check">RECEIVED &#10003;</th>
@@ -79,16 +108,25 @@ export default function DeliveryOrderDoc({ order, lines }) {
           {grouped.map(({ category, items }) => (
             <Fragment key={category}>
               <tr className="do-group">
-                <td colSpan={6}>{category}</td>
+                <td colSpan={fromPo ? 7 : 6}>{category}</td>
               </tr>
               {items.map((line) => (
-                <tr key={line.id}>
+                <tr key={line.id} className={fromPo && Number(line.quantity) === 0 ? "do-na" : undefined}>
                   <td>{line.items?.name || "—"}</td>
-                  <td className="do-center">{Number(line.quantity)}</td>
+                  {fromPo ? <td className="do-center">{fmtQty(line.requested)}</td> : null}
+                  <td className="do-center">
+                    <strong>{fromPo && Number(line.quantity) === 0 ? "—" : fmtQty(line.quantity)}</strong>
+                  </td>
                   <td className="do-center">{line.items?.uom || ""}</td>
                   <td />
                   <td />
-                  <td />
+                  <td>
+                    {fromPo && Number(line.quantity) === 0
+                      ? "Not available"
+                      : fromPo && Number(line.quantity) < line.requested
+                      ? "Short"
+                      : ""}
+                  </td>
                 </tr>
               ))}
             </Fragment>

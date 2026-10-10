@@ -145,6 +145,18 @@ body {
   width: 20%;
 }
 
+/* PO-based DO has one extra column (ORDERED) — narrow the tick columns */
+.do-table-po .do-col-check {
+  width: 13%;
+}
+.do-table-po .do-col-notes {
+  width: 19%;
+}
+
+.do-table .do-na td {
+  color: #8a1c1c;
+}
+
 .do-remarks {
   margin-top: 10px;
   font-size: 10.5px;

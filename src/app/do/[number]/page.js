@@ -14,6 +14,7 @@ function DeliveryOrderScreen({ params }) {
   const profile = useProfile();
   const backHref = profile?.role === "branch" ? homeFor("branch") : "/menu";
   const [order, setOrder] = useState(null);
+  const [po, setPo] = useState(null);
   const [lines, setLines] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -32,17 +33,53 @@ function DeliveryOrderScreen({ params }) {
         return;
       }
 
-      const { data: lineRows, error: lineErr } = await supabase
-        .from("stock_movements")
-        .select("id, quantity, items(name, uom, category)")
-        .eq("do_id", doRow.id)
-        .order("created_at");
+      const [{ data: lineRows, error: lineErr }, { data: poRow, error: poErr }] = await Promise.all([
+        supabase
+          .from("stock_movements")
+          .select("id, item_id, quantity, items(name, uom, category)")
+          .eq("do_id", doRow.id)
+          .order("created_at"),
+        supabase
+          .from("purchase_orders")
+          .select("id, po_number, po_date, ordered_by")
+          .eq("do_id", doRow.id)
+          .maybeSingle(),
+      ]);
 
-      if (lineErr) setError(lineErr.message);
-      else {
-        setOrder(doRow);
-        setLines(lineRows || []);
+      if (lineErr || poErr) {
+        setError((lineErr || poErr).message);
+        setLoading(false);
+        return;
       }
+
+      let finalLines = lineRows || [];
+
+      // Made from a PO: show every ordered line — ordered vs sent — so a
+      // shortage is visible on paper, not discovered at the branch.
+      if (poRow) {
+        const { data: poLines, error: poLinesErr } = await supabase
+          .from("purchase_order_items")
+          .select("id, item_id, qty_requested, items(name, uom, category)")
+          .eq("po_id", poRow.id);
+        if (poLinesErr) {
+          setError(poLinesErr.message);
+          setLoading(false);
+          return;
+        }
+        const sentByItem = {};
+        for (const m of finalLines) sentByItem[m.item_id] = (sentByItem[m.item_id] || 0) + Number(m.quantity);
+        finalLines = (poLines || []).map((pl) => ({
+          id: pl.id,
+          item_id: pl.item_id,
+          items: pl.items,
+          requested: Number(pl.qty_requested),
+          quantity: sentByItem[pl.item_id] || 0,
+        }));
+      }
+
+      setOrder(doRow);
+      setPo(poRow || null);
+      setLines(finalLines);
       setLoading(false);
     })();
   }, [number]);
@@ -99,7 +136,7 @@ function DeliveryOrderScreen({ params }) {
 
       <main className="mx-auto max-w-3xl px-4 py-5 print:p-0 print:max-w-none">
         <div className="do-shell card p-6 print:border-0 print:shadow-none print:p-0 print:rounded-none overflow-x-auto">
-          <DeliveryOrderDoc order={order} lines={lines} />
+          <DeliveryOrderDoc order={order} lines={lines} po={po} />
         </div>
 
         <div className="no-print card p-4 mt-4 text-sm text-muted">
