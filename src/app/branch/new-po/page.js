@@ -10,6 +10,7 @@ import { groupByCategory } from "@/lib/constants";
 import { addDays, formatDate, klToday } from "@/lib/dates";
 import { BRANCH, SUPER_ADMIN } from "@/lib/roles";
 import { bundleError, bundleHint, fmtQty, packLabel, stepFor } from "@/lib/bundles";
+import { announceNewPo } from "@/lib/pushClient";
 
 const ORDERED_BY_KEY = "ck-po-ordered-by";
 
@@ -123,6 +124,8 @@ function NewPoScreen() {
       return;
     }
     const po = Array.isArray(data) ? data[0] : data;
+    // Ping CK phones. Fire-and-forget: the branch never waits on this.
+    announceNewPo(po.id);
     router.replace(`/po/${po.po_number}?new=1`);
   }
 

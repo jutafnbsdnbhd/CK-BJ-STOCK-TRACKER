@@ -7,6 +7,7 @@ import Header from "@/components/Header";
 import AuthGate, { useProfile } from "@/components/AuthGate";
 import { signOut } from "@/lib/authClient";
 import { usePendingPoCount } from "@/lib/usePendingPoCount";
+import PushToggle from "@/components/PushToggle";
 import { CK_MANAGER_ROLES, CK_ROLES, ROLE_LABELS } from "@/lib/roles";
 
 function MenuScreen() {
@@ -92,6 +93,8 @@ function MenuScreen() {
             <span className="block text-sm text-muted mt-0.5">Send stock to a branch</span>
           </span>
         </Link>
+
+        <PushToggle />
 
         <p className="text-xs text-muted text-center mt-2">
           Everything you log is recorded under <span className="font-semibold text-ink">{profile.display_name}</span>.
