@@ -16,13 +16,21 @@ import { CK_MANAGER_ROLES } from "@/lib/roles";
 // Turn database errors into something a manager can act on.
 function friendly(error) {
   if (error.code === "23505") return "That name or code is already used by another row";
+  if (error.code === "23514" && /min_order/i.test(error.message)) {
+    return "Min order must be a whole number (1 or more), or blank";
+  }
+  if (error.code === "23514" && /pack_qty/i.test(error.message)) {
+    return "Contents must be a number above 0, or blank";
+  }
   if (error.code === "23514" && /code/i.test(error.message)) {
     return "Code must be 2–5 capital letters, e.g. TRX";
   }
   return error.message;
 }
 
-export function crudRoute(table, allowedFields) {
+// `validate(payload)` (optional) may tidy the payload in place and returns
+// an error message, or null when it is fine.
+export function crudRoute(table, allowedFields, validate = null) {
   function clean(body) {
     const out = {};
     for (const key of allowedFields) {
@@ -54,6 +62,8 @@ export function crudRoute(table, allowedFields) {
         return Response.json({ error: "Name is required" }, { status: 400 });
       }
       payload.name = String(payload.name).trim();
+      const invalid = validate ? validate(payload) : null;
+      if (invalid) return Response.json({ error: invalid }, { status: 400 });
 
       const { data, error } = await supabaseAdmin()
         .from(table)
@@ -76,6 +86,8 @@ export function crudRoute(table, allowedFields) {
       if (Object.keys(payload).length === 0) {
         return Response.json({ error: "Nothing to update" }, { status: 400 });
       }
+      const invalid = validate ? validate(payload) : null;
+      if (invalid) return Response.json({ error: invalid }, { status: 400 });
 
       const { data, error } = await supabaseAdmin()
         .from(table)

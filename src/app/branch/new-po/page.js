@@ -2,13 +2,14 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CalendarDays, Check, Loader2, Search, Store, User } from "lucide-react";
+import { CalendarDays, Check, Loader2, Minus, Plus, Search, Store, User } from "lucide-react";
 import Header from "@/components/Header";
 import AuthGate, { useProfile } from "@/components/AuthGate";
 import { supabase } from "@/lib/supabaseClient";
 import { groupByCategory } from "@/lib/constants";
 import { addDays, formatDate, klToday } from "@/lib/dates";
 import { BRANCH, SUPER_ADMIN } from "@/lib/roles";
+import { bundleError, bundleHint, fmtQty, packLabel, stepFor } from "@/lib/bundles";
 
 const ORDERED_BY_KEY = "ck-po-ordered-by";
 
@@ -46,7 +47,11 @@ function NewPoScreen() {
     } catch {}
     (async () => {
       const [itemsRes, branchesRes] = await Promise.all([
-        supabase.from("items").select("id, name, category, uom").eq("is_active", true).order("name"),
+        supabase
+          .from("items")
+          .select("id, name, category, uom, min_order, pack_qty, pack_unit")
+          .eq("is_active", true)
+          .order("name"),
         isAdmin
           ? supabase.from("branches").select("id, name, code").eq("is_active", true).order("name")
           : Promise.resolve({ data: [] }),
@@ -75,6 +80,24 @@ function NewPoScreen() {
         .filter((r) => Number.isFinite(r.value) && r.value > 0),
     [items, qty]
   );
+
+  // Lines that break the bundle rule. The database refuses these too; this
+  // just stops the branch before they reach Review.
+  const invalid = useMemo(
+    () => entered.filter(({ item, value }) => bundleError(item, value)),
+    [entered]
+  );
+
+  function bump(item, direction) {
+    const step = stepFor(item);
+    setQty((prev) => {
+      const current = Number(prev[item.id]) || 0;
+      // Snap to the bundle grid first, then move one bundle.
+      const snapped = direction > 0 ? Math.floor(current / step) * step : Math.ceil(current / step) * step;
+      const next = Math.max(0, snapped + direction * step);
+      return { ...prev, [item.id]: next === 0 ? "" : String(next) };
+    });
+  }
 
   const branchName = isAdmin
     ? branches.find((b) => b.id === branchId)?.name || ""
@@ -165,7 +188,7 @@ function NewPoScreen() {
                   <p className="text-xs text-muted">{item.category}</p>
                 </div>
                 <span className="font-bold shrink-0">
-                  {value} {item.uom}
+                  {fmtQty(value)} {item.uom}
                 </span>
               </div>
             ))}
@@ -257,24 +280,53 @@ function NewPoScreen() {
             <section key={category} className="mb-5">
               <h2 className="text-xs font-bold uppercase tracking-wide text-accent mb-2 px-1">{category}</h2>
               <div className="card divide-y divide-line">
-                {rows.map((item) => (
-                  <div key={item.id} className="px-4 py-2.5 flex items-center gap-3">
-                    <div className="min-w-0 flex-1">
-                      <p className="font-medium truncate">{item.name}</p>
-                      <p className="text-xs text-muted">{item.uom}</p>
+                {rows.map((item) => {
+                  const err = bundleError(item, qty[item.id]);
+                  const hint = bundleHint(item);
+                  const pack = packLabel(item);
+                  return (
+                    <div key={item.id} className="px-4 py-2.5">
+                      <div className="flex items-center gap-2">
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium truncate">{item.name}</p>
+                          <p className="text-xs text-muted">
+                            {hint ? <span className="font-semibold text-accent">{hint}</span> : item.uom}
+                            {pack ? ` · ${pack}` : ""}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => bump(item, -1)}
+                          className="grid place-items-center w-9 h-9 rounded-xl border border-line bg-white active:scale-95 shrink-0"
+                          aria-label={`Less ${item.name}`}
+                        >
+                          <Minus size={16} />
+                        </button>
+                        <input
+                          type="number"
+                          inputMode={item.min_order ? "numeric" : "decimal"}
+                          min="0"
+                          step={item.min_order ? stepFor(item) : "any"}
+                          placeholder="0"
+                          value={qty[item.id] ?? ""}
+                          onChange={(e) => setQty((prev) => ({ ...prev, [item.id]: e.target.value }))}
+                          className={`input w-20 text-right font-semibold py-2 ${
+                            err ? "border-red-400 text-red-600 bg-red-50" : ""
+                          }`}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => bump(item, 1)}
+                          className="grid place-items-center w-9 h-9 rounded-xl border border-line bg-white active:scale-95 shrink-0"
+                          aria-label={`More ${item.name}`}
+                        >
+                          <Plus size={16} />
+                        </button>
+                      </div>
+                      {err ? <p className="text-xs text-red-600 font-semibold text-right mt-1">{err}</p> : null}
                     </div>
-                    <input
-                      type="number"
-                      inputMode="decimal"
-                      min="0"
-                      step="any"
-                      placeholder="0"
-                      value={qty[item.id] ?? ""}
-                      onChange={(e) => setQty((prev) => ({ ...prev, [item.id]: e.target.value }))}
-                      className="input w-24 text-right font-semibold py-2"
-                    />
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </section>
           ))
@@ -299,13 +351,15 @@ function NewPoScreen() {
           <p className="text-sm text-muted flex-1">
             {!orderedBy.trim()
               ? "Fill in your name"
+              : invalid.length > 0
+              ? `Fix ${invalid.length} quantit${invalid.length === 1 ? "y" : "ies"} (bundles)`
               : entered.length === 0
               ? "Key in a quantity"
               : `${entered.length} item${entered.length === 1 ? "" : "s"} ready`}
           </p>
           <button
             className="btn-primary flex-1"
-            disabled={entered.length === 0 || !orderedBy.trim() || !branchId}
+            disabled={entered.length === 0 || invalid.length > 0 || !orderedBy.trim() || !branchId}
             onClick={() => setStep("review")}
           >
             Review

@@ -45,9 +45,13 @@ function ManagerScreen() {
             endpoint="items"
             label="item"
             fields={[
-              { key: "category", default: "Protein / Ready Item" },
-              { key: "uom", placeholder: "Unit e.g. Pkt", default: "Pkt" },
+              { key: "category", label: "Category", default: "Protein / Ready Item" },
+              { key: "uom", label: "Unit", placeholder: "Unit e.g. Pkt", default: "Pkt" },
+              { key: "min_order", label: "Min order (bundle)", placeholder: "blank = no rule", numeric: true },
+              { key: "pack_qty", label: "Contents qty", placeholder: "e.g. 12", numeric: true },
+              { key: "pack_unit", label: "Contents unit", placeholder: "e.g. Pkt" },
             ]}
+            footnote="Min order: branches must order in multiples of it (25 → 25, 50, 75…). 1 = whole units only. Blank = no rule. Changes apply to new POs only. Contents is for reference — e.g. 12 + Pkt on a Ctn item shows “12 Pkt / Ctn”."
           />
         ) : null}
         {tab === "Branches" ? (

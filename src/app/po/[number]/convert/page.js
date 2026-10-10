@@ -10,6 +10,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { groupByCategory } from "@/lib/constants";
 import { formatDate } from "@/lib/dates";
 import { CK_ROLES } from "@/lib/roles";
+import { bundleError, bundleHint, packEquivalent, packLabel } from "@/lib/bundles";
 
 function fmt(n) {
   const v = Number(n);
@@ -52,7 +53,7 @@ function ConvertScreen({ number }) {
       const [{ data: rows, error: e2 }, { data: bal, error: e3 }] = await Promise.all([
         supabase
           .from("purchase_order_items")
-          .select("id, item_id, qty_requested, items(name, category, uom)")
+          .select("id, item_id, qty_requested, items(name, category, uom, min_order, pack_qty, pack_unit)")
           .eq("po_id", header.id),
         supabase.from("item_balances").select("item_id, balance"),
       ]);
@@ -80,13 +81,22 @@ function ConvertScreen({ number }) {
           name: l.items?.name || "—",
           category: l.items?.category || "Off Season",
           uom: l.items?.uom || "",
+          min_order: l.items?.min_order ?? null,
+          pack_qty: l.items?.pack_qty ?? null,
+          pack_unit: l.items?.pack_unit ?? null,
           requested: Number(l.qty_requested),
           value,
           valid: Number.isFinite(value) && value >= 0,
           balance,
           short: Number.isFinite(value) && value > balance,
         };
-      }),
+      })
+      .map((r) => ({
+        ...r,
+        // Warning only — CK may have a reason. Branches are held to whole
+        // bundles; CK is trusted to judge.
+        partBundle: r.valid && r.value > 0 ? bundleError(r, r.value) : null,
+      })),
     [lines, send, balances]
   );
 
@@ -96,6 +106,7 @@ function ConvertScreen({ number }) {
   const notAvailable = rows.filter((r) => r.valid && r.value === 0);
   const reduced = rows.filter((r) => r.valid && r.value > 0 && r.value < r.requested);
   const overBalance = sending.filter((r) => r.short);
+  const partBundles = sending.filter((r) => r.partBundle);
 
   async function confirm() {
     setSubmitting(true);
@@ -195,8 +206,13 @@ function ConvertScreen({ number }) {
                     <p className="text-xs text-muted">Ordered {fmt(r.requested)} — sending more</p>
                   ) : null}
                 </div>
-                <span className="font-bold shrink-0">
-                  {fmt(r.value)} {r.uom}
+                <span className="text-right shrink-0">
+                  <span className="block font-bold">
+                    {fmt(r.value)} {r.uom}
+                  </span>
+                  {packEquivalent(r, r.value) ? (
+                    <span className="block text-xs text-muted">{packEquivalent(r, r.value)}</span>
+                  ) : null}
                 </span>
               </div>
             ))}
@@ -218,6 +234,19 @@ function ConvertScreen({ number }) {
                 ))}
               </div>
             </>
+          ) : null}
+
+          {partBundles.length > 0 ? (
+            <div className="card p-4 mt-5 border-amber-200 bg-amber-50 flex items-start gap-3">
+              <AlertTriangle className="text-amber-600 shrink-0 mt-0.5" size={20} />
+              <div className="text-sm text-amber-900">
+                <p className="font-bold">Not a whole bundle</p>
+                <p className="mt-0.5">
+                  {partBundles.map((r) => `${r.name} (${fmt(r.value)} ${r.uom})`).join(", ")}. Bundles are never
+                  split — check this is really what you are sending.
+                </p>
+              </div>
+            </div>
           ) : null}
 
           {overBalance.length > 0 ? (
@@ -283,6 +312,11 @@ function ConvertScreen({ number }) {
                   <div className="flex items-center gap-3">
                     <div className="min-w-0 flex-1">
                       <p className="font-medium truncate">{r.name}</p>
+                      {bundleHint(r) || packLabel(r) ? (
+                        <p className="text-[11px] font-semibold text-accent">
+                          {[bundleHint(r), packLabel(r)].filter(Boolean).join(" · ")}
+                        </p>
+                      ) : null}
                       <p className="text-xs text-muted">
                         Ordered <span className="font-semibold text-ink">{fmt(r.requested)} {r.uom}</span> · CK has{" "}
                         <span className={`font-semibold ${r.balance < r.requested ? "text-red-600" : "text-ink"}`}>
@@ -302,6 +336,11 @@ function ConvertScreen({ number }) {
                       }`}
                     />
                   </div>
+                  {r.partBundle ? (
+                    <p className="text-xs text-amber-700 font-semibold text-right mt-1">
+                      Part bundle — {r.partBundle.toLowerCase()}
+                    </p>
+                  ) : null}
                   <div className="flex gap-2 mt-2 justify-end">
                     <button
                       className="text-xs font-semibold px-2.5 py-1 rounded-lg border border-line"

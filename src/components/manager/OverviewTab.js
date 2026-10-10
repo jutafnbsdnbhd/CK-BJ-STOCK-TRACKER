@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Loader2, Search } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import { groupByCategory } from "@/lib/constants";
+import { bundleHint, packEquivalent, packLabel } from "@/lib/bundles";
 
 export default function OverviewTab() {
   const [rows, setRows] = useState([]);
@@ -13,12 +14,18 @@ export default function OverviewTab() {
 
   useEffect(() => {
     (async () => {
-      const { data, error } = await supabase
-        .from("item_balances")
-        .select("item_id, item_name, category, uom, balance, total_in, total_out, is_active")
-        .eq("is_active", true);
-      if (error) setError(error.message);
-      else setRows(data || []);
+      const [{ data, error }, { data: itemRows, error: itemError }] = await Promise.all([
+        supabase
+          .from("item_balances")
+          .select("item_id, item_name, category, uom, balance, total_in, total_out, is_active")
+          .eq("is_active", true),
+        supabase.from("items").select("id, min_order, pack_qty, pack_unit"),
+      ]);
+      if (error || itemError) setError((error || itemError).message);
+      else {
+        const extra = Object.fromEntries((itemRows || []).map((i) => [i.id, i]));
+        setRows((data || []).map((r) => ({ ...r, ...(extra[r.item_id] || {}) })));
+      }
       setLoading(false);
     })();
   }, []);
@@ -66,14 +73,17 @@ export default function OverviewTab() {
                   <p className="font-medium truncate">{row.item_name}</p>
                   <p className="text-xs text-muted">
                     in {row.total_in} &middot; out {row.total_out}
+                    {bundleHint(row) ? ` · ${bundleHint(row)}` : ""}
+                    {packLabel(row) ? ` · ${packLabel(row)}` : ""}
                   </p>
                 </div>
-                <span
-                  className={`font-bold shrink-0 ${
-                    Number(row.balance) < 0 ? "text-red-600" : "text-ink"
-                  }`}
-                >
-                  {row.balance} <span className="font-normal text-muted text-sm">{row.uom}</span>
+                <span className="text-right shrink-0">
+                  <span className={`block font-bold ${Number(row.balance) < 0 ? "text-red-600" : "text-ink"}`}>
+                    {row.balance} <span className="font-normal text-muted text-sm">{row.uom}</span>
+                  </span>
+                  {packEquivalent(row, row.balance) ? (
+                    <span className="block text-xs text-muted">{packEquivalent(row, row.balance)}</span>
+                  ) : null}
                 </span>
               </div>
             ))}

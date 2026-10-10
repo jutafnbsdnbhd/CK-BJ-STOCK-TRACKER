@@ -9,7 +9,7 @@ import { authFetch } from "@/lib/authClient";
  * Generic manager CRUD table for items / staff / branches.
  * `fields` describes the editable columns beyond `name`.
  */
-export default function CrudTab({ endpoint, label, fields = [] }) {
+export default function CrudTab({ endpoint, label, fields = [], footnote = null }) {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -135,6 +135,10 @@ export default function CrudTab({ endpoint, label, fields = [] }) {
                 }`}
               >
                 <div className="grid gap-2 sm:grid-cols-3">
+                  <label className="grid gap-0.5">
+                    {fields.some((f) => f.label) ? (
+                      <span className="text-[11px] font-semibold text-muted px-1">Name</span>
+                    ) : null}
                   <input
                     className="input py-2"
                     defaultValue={row.name}
@@ -143,10 +147,14 @@ export default function CrudTab({ endpoint, label, fields = [] }) {
                       send("PATCH", { id: row.id, name: e.target.value })
                     }
                   />
+                  </label>
                   {fields.map((f) =>
                     f.key === "category" ? (
+                      <label key={f.key} className="grid gap-0.5">
+                        {f.label ? (
+                          <span className="text-[11px] font-semibold text-muted px-1">{f.label}</span>
+                        ) : null}
                       <select
-                        key={f.key}
                         className="input py-2"
                         defaultValue={row.category}
                         onChange={(e) => send("PATCH", { id: row.id, category: e.target.value })}
@@ -155,17 +163,23 @@ export default function CrudTab({ endpoint, label, fields = [] }) {
                           <option key={c}>{c}</option>
                         ))}
                       </select>
+                      </label>
                     ) : (
-                      <input
-                        key={f.key}
-                        className="input py-2"
-                        defaultValue={row[f.key] ?? ""}
-                        placeholder={f.placeholder}
-                        onBlur={(e) =>
-                          e.target.value !== (row[f.key] ?? "") &&
-                          send("PATCH", { id: row.id, [f.key]: e.target.value })
-                        }
-                      />
+                      <label key={f.key} className="grid gap-0.5">
+                        {f.label ? (
+                          <span className="text-[11px] font-semibold text-muted px-1">{f.label}</span>
+                        ) : null}
+                        <input
+                          className="input py-2"
+                          inputMode={f.numeric ? "decimal" : undefined}
+                          defaultValue={row[f.key] ?? ""}
+                          placeholder={f.placeholder}
+                          onBlur={(e) =>
+                            e.target.value.trim() !== String(row[f.key] ?? "") &&
+                            send("PATCH", { id: row.id, [f.key]: e.target.value })
+                          }
+                        />
+                      </label>
                     )
                   )}
                 </div>
@@ -198,6 +212,7 @@ export default function CrudTab({ endpoint, label, fields = [] }) {
         Edits save when you tap away from the box. Deleting deactivates the {label} and hides it
         from staff — past movements are never removed.
       </p>
+      {footnote ? <p className="text-xs text-muted mt-1.5 px-1">{footnote}</p> : null}
     </div>
   );
 }
